@@ -19,6 +19,9 @@ library(magrittr) # the pipe
 library(tidyverse) # for data wrangling + visualization 
 library(tidymodels) # for modeling 
 library(gt) # for pretty tables 
+library(ggplot2) # to draw the plots
+library(forcats) # to deal with category variables
+
 
 boston_cocktails <- readr::read_csv('data/boston_cocktails.csv')
 ```
@@ -89,16 +92,145 @@ recipe_prep_var
 
 ### Exercise 4
 
-On average the most used ingredient in the Boston Cocktails dataset is \_\_\_\_.
+```{r}
+
+# To perform tidy on the prepped data
+
+recipe_tidy <- recipes::tidy(recipe_prep_var)
+recipe_tidy
+
+# To display the normalization data 
+
+recipe_norm <- recipe_prep_var %>% recipes::tidy(1)
+recipe_norm
+
+# To find the most used ingredient on average based on statistic as "mean"
+Most_used_ingr_norm_mean <- recipe_norm %>% dplyr::filter(statistic == "mean") %>%
+                dplyr::arrange(desc(value)) %>% slice_head(n=1)
+
+Most_used_ingr_norm_mean
+
+# To find the most used ingredient on average based on statistic as "sd"
+Most_used_ingr_norm_sd <- recipe_norm %>% dplyr::filter(statistic == "sd") %>%
+                dplyr::arrange(desc(value)) %>% slice_head(n=1)
+
+Most_used_ingr_norm_sd
+
+# To find the most used ingredient on average without normalization method
+
+most_used_ingredient <- boston_cocktails %>%
+              group_by(ingredient) %>%
+              summarise(average_count = mean(measure_number)) %>%
+              arrange(desc(average_count))  
+most_used_ingredient
+```
+
+On average the most used ingredient in the Boston Cocktails dataset is **gin** based on **normalised data with statistic = 'mean'.**
+
+On average the most used ingredient in the Boston Cocktails dataset is **Orange juice** based on **normalised data with statistic = 'sd'**
+
+On average the most used ingredient in the Boston Cocktails dataset is **cranberry juice** based on **with out normalised data.**
 
 ### Exercise 5
 
-Describe describe the drinks represented by PC1?
+```{r}
+
+# To get the data for pca
+recipe_pca <- recipe_prep_var %>% recipes::tidy(2)
+view(recipe_pca)
+
+# To filter the pca values from 1 to 5 and mutate to factor data and order it
+recipe_pca_1_5 <- recipe_pca %>% dplyr::filter(component %in% c("PC1","PC2","PC3","PC4","PC5")) %>% 
+                                 dplyr::mutate(order = forcats::fct_inorder(component))  
+
+recipe_pca_1_5
+
+# To plot the values using ggplot 
+recipe_pca_1_5 %>% ggplot(aes(value, terms, fill = terms)) +
+                   geom_col(show.legend = FALSE) +
+                   facet_wrap(~component, nrow = 1) +
+                   labs(y = NULL) +
+                   theme(axis.text=element_text(size=7),
+                   axis.title=element_text(size=14,face="bold"))
+
+```
+
+Describe the drinks represented by PC1?
+
+The drink is highly syrupy in nature, very less in sugary flavor and less calories because of that. This is a drink having moderate alcohol content with Tequila as the main ingredient along with juice such as lime juice.
 
 ### Exercise 6
 
-The characteristic alcoholic beverage of each of the first 4 principle components is \_\_\_.
+```{r}
+
+# Filter data for pca from PC1 to PC4 and get top 8 ingredients and plot
+recipe_pca %>% filter(component %in% c("PC1", "PC2", "PC3", "PC4")) %>%  #filter based on PC1 to PC4
+               group_by(component) %>%
+               slice_max(order_by = abs(value), n = 8) %>%               #slice the absvalue of first 8 ingredients
+               gt() %>%                                                  # use gt() and color the data based on value
+               data_color(
+                 columns = c(value),
+                 colors = scales::col_numeric(
+                 palette = c("red", "green"),
+                 domain = c(-1, 1)
+                 )
+                ) 
+```
+
+The characteristic alcoholic beverage of each of the first 4 principle components as below:
+
+**PC1:**
+
+The main noticeable ingredients with the highest absolute values: simple syrup (0.3125978) and powdered sugar (-0.4764442).
+
+Characteristic alcoholic beverage of PC1 shows that, it is a syrupy textured mixed drink (with lime juice and **Tequila**), having less sugar content.
+
+The most used alcoholic beverage: Tequila.
+
+**PC2:**
+
+The main noticeable ingredients with the highest absolute values: dry **vermouth** (0.4332412), sweet **vermouth** (0.3754366), **gin** (0.2437374)
+
+Characteristic alcoholic beverage of PC2 shows that, this drink is in a cocktail category with the main ingredient as vermouth with a mix of gin, and less sugary content.
+
+The most used alcoholic beverage: gin, vermouth.
+
+**PC3:**
+
+Ingredients with the highest absolute values: **gin** (0.3780348), egg white (0.3094631), followed by lemon juice(0.2318927) and apricot flavored brandy (0.2134899).
+
+Characteristic alcoholic beverage of PC3 shows that, it is likely associated with a fruity mix of cocktail that has a prominent content of gin and also include egg white.
+
+The most used alcoholic beverage: gin.
+
+**PC4:**
+
+Ingredients with the highest absolute values: grenadine (0.4068737), orange juice (0.3625622), **vodka**(0.3008406).
+
+Characteristic alcoholic beverage of PC4 shows that, it is also a cocktail with mostly a wide variety mix of fruity flavors (pomegranate, orange, cranberry), cream with vodka.
+
+The most used alcoholic beverage: vodka.
 
 ### Exercise 7
 
 How would you interpret the results of a PCA analysis for a client?
+
+```{r}
+
+# To bake the prepped data and plot using ggplot for PC1 and PC2
+
+recipes::bake(recipe_prep_var,clean_col) %>% 
+          ggplot(aes(PC1, PC2, label = name)) +
+          geom_point(aes(color = category), alpha = 0.7, size = 2) +
+          geom_text(check_overlap = TRUE, hjust = "inward") + 
+          labs(color = NULL)
+
+```
+
+Based on the plot data, it shows that PC1 set is having a lesser affinity towards cocktail types such as Cocktail classics, cordial and Liquers and they are having moderate affinity towards the varieties such as Gin and a high affinity towards the strong alcoholic varieties such as Rum, Tequila, Vodka, Whiskies.
+
+This shows that PC1 is more into strong alcoholic varieities than the mixed cocktail non alcoholic types.
+
+For PC2, it shows that the cocktail variations carry a major part, but based on the type of cocktail, the affinity varies. That is, some cocktails in classic cocktails or in the type: cordial and Liquers are least preferred such as Lemonade, Coffee flip etc, where as some others such as Sphinx cocktail, Nineteenth Hole etc are highly preferred. In the case of alcoholic categories such as Vodka, Gin, Tequila etc are moderately preferred.
+
+This shows that PC2 is more in to certain variations of cocktails (not all types) and they moderately prefer alcoholic varieties.
