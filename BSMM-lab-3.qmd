@@ -1,8 +1,8 @@
 ---
 title: "BSMM-lab-3"
 subtitle: "BSMM 8740 Fall 2023"
-author: "Add your name here"
-date: "Add the date here"
+author: "Archana Vijayakumar Sreekala"
+date: "October 12th, 2023"
 format: html
 editor: visual
 self-contained: true
@@ -14,6 +14,12 @@ Load packages and data:
 
 ```{r load-pkg-data}
 #| message: false
+
+library(magrittr) # the pipe 
+library(tidyverse) # for data wrangling + visualization 
+library(tidymodels) # for modeling 
+library(gt) # for pretty tables 
+
 boston_cocktails <- readr::read_csv('data/boston_cocktails.csv')
 ```
 
@@ -21,11 +27,45 @@ boston_cocktails <- readr::read_csv('data/boston_cocktails.csv')
 
 ### Exercise 1
 
-The median measure amount across across all cocktails is \_\_\_.
+```{r #To assess the quality of the dataset}
+
+view (boston_cocktails) # view the dataset 
+skimr::skim(boston_cocktails) # skimr to view the dataset quality 
+
+# Data Explorer introduce to view the details of missing and col info 
+DataExplorer::introduce(boston_cocktails) 
+
+# To take summary and find mean of measure value 
+
+median_measure_number <- boston_cocktails %>% summarise(median_measure_number=median(measure_number)) 
+median_measure_number
+
+# To display the answer 
+stringr::str_glue( "The median measure amount across across all cocktails is {median_measure_number}.")
+```
 
 ### Exercise 2
 
-The **Leap Frog Highball** contains \_\_\_ of gin
+```{r #o pivot the table and find the gin amount in a cocktail}
+  
+# To form the pivot table by selecting the required fields 
+
+pivot_table <- boston_cocktails %>% select(name, category, ingredient, measure_number) %>%     pivot_wider(names_from = ingredient, values_from = measure_number, values_fill = 0) 
+
+# To clean the names using janitor 
+
+clean_col <- pivot_table %>% janitor::clean_names() 
+
+# To drop the NA columns 
+
+clean_col_na <- clean_col %>% drop_na() 
+
+# To filter based on "Leap Frog Highball" and find the amount of gin 
+
+gin_amount <- clean_col_na %>% dplyr::filter(name == "Leap Frog Highball") %>% dplyr::select(gin) 
+
+stringr::str_glue( "The Leap Frog Highball contains {gin_amount} oz of gin")
+```
 
 ### Exercise 3
 
