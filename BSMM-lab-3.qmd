@@ -69,7 +69,23 @@ stringr::str_glue( "The Leap Frog Highball contains {gin_amount} oz of gin")
 
 ### Exercise 3
 
-\_\_\_ predictor variables are prepped by the recipe.
+```{r #To implement recipe and arrive at the no of predictor variables}
+
+library(recipes) #load library for recipes
+
+# create recipe, update roles, normalise and perform pca
+recipe_var <- recipe(~ ., data =clean_col_na) %>%
+              update_role(name, category, new_role = "id") %>% 
+              recipes::step_normalize(all_numeric()) %>%
+              step_pca(all_numeric())
+
+# prep the final data and assign to a variable
+recipe_prep_var <- prep(recipe_var)
+
+recipe_prep_var
+```
+
+40 predictor variables are prepped by the recipe.
 
 ### Exercise 4
 
